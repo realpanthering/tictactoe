@@ -41,7 +41,7 @@ class SinglePlayerMode implements GameMode {
         // Initialize the board
         board = new Board(p1, p2);
         // Start the game
-        board.startCPU();
+//        board.startCPU();
         // Implement logic for 1-player mode here
     }
 
