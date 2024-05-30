@@ -13,7 +13,7 @@ class TwoPlayerMode implements GameMode {
     public void startGame() {
         System.out.println("This is a two player game, so please take turns accordingly.");
         // Initialize the board
-        board = new Board(p1, p2);
+        board = new Board(p1, p2,3, 3);
         // Start the game
         board.start();
     }
@@ -39,7 +39,7 @@ class SinglePlayerMode implements GameMode {
     public void startGame() {
         System.out.println("This is a one player match between you and the computer.");
         // Initialize the board
-        board = new Board(p1, p2);
+        board = new Board(p1, p2, 3,3);
         // Start the game
 //        board.startCPU();
         // Implement logic for 1-player mode here
@@ -67,7 +67,7 @@ class SimulatedMatchMode implements GameMode {
     public void startGame() {
         System.out.println("This is a simulated match.");
         // Initialize the board
-        board = new Board(p1, p2);
+        board = new Board(p1, p2, 3,3);
         // Start the game
         board.simulate();
         // Implement logic for simulated match mode here
