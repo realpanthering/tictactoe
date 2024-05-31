@@ -1,9 +1,9 @@
 import org.jetbrains.annotations.NotNull;
-
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.InputMismatchException;
-import java.util.Random;
 import java.util.Scanner;
+import java.util.Random;
 
 public class TicTacToe {
 
@@ -122,28 +122,31 @@ public class TicTacToe {
     }
     private void StartGame(boolean CPU, boolean auto) {
         if (auto) {
-            board.simulate();
+            board.simulate(CPUDiff());
         } else if (CPU) {
-            System.out.println("Select CPU difficulty - easy (E) or hard (H):");
-            boolean valid = false;
-            Scanner input = new Scanner(System.in);
-            boolean difficult = false;
-            while (!valid) {
-                char ans = Character.toUpperCase(input.next().charAt(0));
-                if (ans == 'E' || ans == 'H') {
-                    difficult = ans == 'H';
-                    valid = true;
-                } else {
-                    System.out.println("Invalid input. Please type 'E' (easy) or 'H' (hard):");
-                }
-            }
-            board.startCPU(difficult);
+            board.startCPU(CPUDiff());
         } else {
             board.start();
         }
     }
-
+    private boolean CPUDiff() {
+        System.out.println("Select CPU difficulty - easy (E) or hard (H):");
+        boolean valid = false;
+        Scanner input = new Scanner(System.in);
+        boolean difficult = false;
+        while (!valid) {
+            char ans = Character.toUpperCase(input.next().charAt(0));
+            if (ans == 'E' || ans == 'H') {
+                difficult = ans == 'H';
+                valid = true;
+            } else {
+                System.out.println("Invalid input. Please type 'E' (easy) or 'H' (hard):");
+            }
+        }
+        return difficult;
+    }
 }
+
 
 class Board {
     private final char[][] board; // players: 'X' and 'O'
@@ -152,9 +155,12 @@ class Board {
     private boolean gameOver;
     private final int boardSize;
     private  final int streak;
+    private final int MAX_DEPTH;
     private final char p1;
     private final char p2;
     private char winner;
+    private final HashMap<String, Integer> memo;
+
 
     private static final int WIN_SCORE = 10;
     Board(char player1, char player2, int size, int streak) {
@@ -167,9 +173,11 @@ class Board {
         numMoves = 0;
         maxMoves = boardSize * boardSize;
         gameOver = false;
+        MAX_DEPTH = calculateMaxDepth(boardSize, streak);
         p1 = player1;
         p2 = player2;
         winner = 0; // default to draw
+        memo = new HashMap<>();
     }
 
     public void start() {
@@ -259,7 +267,7 @@ class Board {
             if (board[i][i] == currentPlayer) {
                 mainCount++;
                 if (mainCount >= streak) {
-                    System.out.println("Win detected across main diagonal");
+//                    System.out.println("Win detected across main diagonal");
                     return true; // detect win when streak is reached
                 }
             } else {
@@ -271,7 +279,7 @@ class Board {
             if (board[i][boardSize - i - 1] == currentPlayer) {
                 antiCount++;
                 if (antiCount >= streak) {
-                    System.out.println("Win detected across anti-diagonal");
+//                    System.out.println("Win detected across anti-diagonal");
                     return true; // detect win when streak is reached
                 }
             } else {
@@ -288,7 +296,7 @@ class Board {
                 if (board[k][col] == currentPlayer) {
                     counter++;
                     if (counter >= streak) {
-                        System.out.println("Vertical Win detected across column " + col);
+//                        System.out.println("Vertical Win detected across column " + col);
                         return true;
                     }
                 } else {
@@ -307,7 +315,7 @@ class Board {
                 if (board[row][k] == currentPlayer) {
                     counter++;
                     if (counter >= streak) {
-                        System.out.println("Horizontal Win detected across row " + row);
+//                        System.out.println("Horizontal Win detected across row " + row);
                         return true;
                     }
                 } else {
@@ -408,12 +416,12 @@ class Board {
         System.out.println("It is the CPU's turn (" + currentPlayer + "). It's move: (" + x + ", " + y + ")");
     }
 
-    public void simulate() {
+    public void simulate(boolean diff) {
         boolean turn = false;
         while (numMoves < maxMoves && !gameOver) {
             char current = turn ? p1 : p2;
             display();
-            makeCPUMove(false, current);
+            makeCPUMove(diff, current);
             turn = !turn;
             gameOver = checkGameStatus(current);
             System.out.println(numMoves + "th move");
@@ -449,20 +457,44 @@ class Board {
             return 0;
         }
     }
+    /**
+     * Minimax algorithm with alpha-beta pruning.
+     *
+     * @param depth              The current depth in the search tree.
+     * @param isMaximizingPlayer Indicates whether the current player is maximizing or minimizing.
+     * @param player             The current player.
+     * @param alpha              best already explored option along path to the root for the maximizer
+     * @param beta               best already explorer option along path to the root for the minimizer
+     * @return                   The best score achievable by the current player at the given depth.
+     */
+    private int minimax(int depth, boolean isMaximizingPlayer, char player, int alpha, int beta) {
+        // (1) consider cached results (2) then terminal states (3) finally heuristic results
+        // Generate a unique key for the current state to use in memoization
+        String key = generateKey() + depth + isMaximizingPlayer + player;
+        if (memo.containsKey(key)) {    // Check if the current state is already memoized
+            return memo.get(key);
+        } // Note: memoization check comes first to skip unnecessary computation
 
-    private int minimax(int depth, boolean isMaximizingPlayer, char player) {
+        // Check if the current board state represents a win or loss for the player
         int score = evaluate(player);
         if (score == WIN_SCORE) {
-            return score - depth;
-        } else if (score < -WIN_SCORE) {
-            return score + depth;
+            return score - depth; // adjust by depth to prioritize faster wins
+        } else if (score == -WIN_SCORE) {
+            return score + depth; // adjust by depth to prioritize slower losses
+        }
+
+        // If the maximum depth is reached or the game is over, evaluate the state
+        if (depth >= MAX_DEPTH || gameOver) {
+            int eval = evaluate(player); // Evaluate the state using a heuristic function
+            memo.put(key, eval); // Memoize the evaluated value
+            return eval; // Return the evaluated value
         }
 
         if (isBoardFull()) { // if current board state is terminating state
             return 0; // return value of board (it is a tie)?
         }
 
-        int best;// set to very large number (+∞)
+        int best;
         if (isMaximizingPlayer) {
             best = Integer.MIN_VALUE;
             // for each move in board
@@ -471,8 +503,12 @@ class Board {
                     if (isValidMove(i, j)) {
                         board[i][j] = player;
                         // call minmax recursively (until base case is hit) and choose the maximum value
-                        best = Math.max(best, minimax(depth + 1, false, player));
+                        best = Math.max(best, minimax(depth + 1, false, player, alpha, beta));
                         board[i][j] = '\0'; // undo the move
+                        alpha = Math.max(alpha, best);
+                        if (alpha > beta) {
+                            return best; // maximizer will never choose to enter this branch since it has a better option
+                        }
                     }
                 }
             }
@@ -484,8 +520,12 @@ class Board {
                     if (isValidMove(i, j)) {
                         board[i][j] = player;
                         // call minmax recursively (until base case is hit) and choose the maximum value
-                        best = Math.min(best, minimax(depth + 1, true, player));
+                        best = Math.min(best, minimax(depth + 1, true, player, alpha, beta));
                         board[i][j] = '\0'; // undo the move
+                        beta = Math.min(beta, best);
+                        if (beta <= alpha) {
+                            return best; // minimizer will never choose this path since it has a better option
+                        }
                     }
                 }
             }
@@ -494,7 +534,7 @@ class Board {
     }
     private Move smartMove(char player) {
         // Minimax algorithm
-        int bestVal = -1000;
+        int bestVal = Integer.MIN_VALUE;
         Move bestMove = new Move();
         bestMove.row = -1;
         bestMove.col = -1;
@@ -502,29 +542,53 @@ class Board {
         // for each move in board
         for (int i = 0; i < boardSize; i++) {
             for (int j = 0; j < boardSize; j++) {
-                if (board[i][j] == '\0') {
-                    board[i][j] = player;
-                    int moveVal = minimax(0, false, player);
-                    board[i][j] = '\0';
+                if (board[i][j] == '\0') { // if empty space
+                    board[i][j] = player; // test moving current player to this space
+                    // call minimax with alpha beta pruning (alpha = -∞, beta = +∞)
+                    int moveVal = minimax(0, false, player, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                    board[i][j] = '\0'; // reset board space
                     if (moveVal > bestVal) { // if current move is better than bestMove
                         bestMove.row = i;
                         bestMove.col = j;
-                        bestVal = moveVal;
+                        bestVal = moveVal; // update
                     }
                 }
 
             }
         }
-        System.out.printf("The value of the best Move " +
-                "is : %d\n\n", bestVal);
+//        System.out.printf("The value of the best Move " +
+//                "is : %d\n\n", bestVal);
 
         return bestMove;
     }
 
-
     private static class Move {
         int row;
         int col;
+    }
+
+    private int calculateMaxDepth(int boardSize, int streak) {
+        return switch (boardSize) {
+            case 2 -> 4;
+            case 3 -> 9;
+            case 4 -> 7; // Adjust as needed
+            case 5 -> 5; // Adjust as needed
+            default -> 4; // Larger boards
+        };
+    }
+
+    private String generateKey() { // for memoization
+        StringBuilder key = new StringBuilder();
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                if (board[i][j] == '\0') {
+                    key.append('.'); // Use '.' to represent empty cells
+                } else {
+                    key.append(board[i][j]);
+                }
+            }
+        }
+        return key.toString();
     }
 }
 

@@ -69,7 +69,7 @@ class SimulatedMatchMode implements GameMode {
         // Initialize the board
         board = new Board(p1, p2, 3,3);
         // Start the game
-        board.simulate();
+        board.simulate(false);
         // Implement logic for simulated match mode here
     }
 
