@@ -41,7 +41,7 @@ class SinglePlayerMode implements GameMode {
         // Initialize the board
         board = new Board(p1, p2, 3,3);
         // Start the game
-//        board.startCPU();
+//        board.startCPU(true);
         // Implement logic for 1-player mode here
     }
 
@@ -69,7 +69,7 @@ class SimulatedMatchMode implements GameMode {
         // Initialize the board
         board = new Board(p1, p2, 3,3);
         // Start the game
-        board.simulate(false);
+//        board.simulate(true);
         // Implement logic for simulated match mode here
     }
 
