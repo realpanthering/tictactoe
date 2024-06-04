@@ -589,7 +589,7 @@ class Board {
                         best = Math.max(best, minimax(depth + 1, false, player, alpha, beta));
                         board[i][j] = '\0'; // undo the move
                         alpha = Math.max(alpha, best);
-                        if (alpha > beta) {
+                        if (alpha > beta) { // prune this branch
                             return best; // maximizer will never choose to enter this branch since it has a better option
                         }
                     }
@@ -606,7 +606,7 @@ class Board {
                         best = Math.min(best, minimax(depth + 1, true, player, alpha, beta));
                         board[i][j] = '\0'; // undo the move
                         beta = Math.min(beta, best);
-                        if (beta <= alpha) {
+                        if (beta <= alpha) { // prune this branch
                             return best; // minimizer will never choose this path since it has a better option
                         }
                     }
