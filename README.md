@@ -1,9 +1,9 @@
 TicTacToe by David Okafo.
 
 Simple Tic-Tac-Toe game with customizable gameplay options.
-(1 Option for 2-player mode with 2 real people on the same device, each player taking turns
-(2 Option for 1-player mode versus CPU
-(3 Option to simulate a match between two CPU/AI
+1) Option for 2-player mode with 2 real people on the same device, each player taking turns
+2) Option for 1-player mode versus CPU
+3) Option to simulate a match between two CPU/AI
 
 - CPU has easy, medium, and hard difficulty modes
   - easy mode simply generates random numbers
