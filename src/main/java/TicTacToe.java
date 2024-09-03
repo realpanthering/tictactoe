@@ -70,10 +70,11 @@ public final class TicTacToe {
         StartGame(userInput == 1, userInput == 0, scanner);
 
         if (EndGame(scanner)) {
-            Game();
+            Game(); // restart the game if player wants to play again
         } else {
             System.out.println("Thanks for playing!");
         }
+        scanner.close();
     }
 
     /** Sets up the mechanics of the game board.
@@ -90,8 +91,11 @@ public final class TicTacToe {
                 n = scanner.nextInt();
                 if (n > 1 && n <= 10) {
                     valid1 = true;
-                    if (n > 5) { System.err.println("WARNING: You chose a large game board. Game may not run properly if you're playing with AI."); }
-                 } else {
+                    if (n > 5) {
+                        System.err.println("WARNING: You chose a large game board. " +
+                                "Game may not run properly if you're playing with AI.");
+                    }
+                } else {
                     System.err.println("Board size must be a positive integer greater than 1 but no more than 10.");
                 }
             } else {
@@ -209,8 +213,8 @@ class Board {
     private  final int streak; // consecutive game marks required to win
     private final int MAX_DEPTH; // maximum depth for minimax algorithm
     private int numRecursions; // debugging purposes, tracks # of recursive calls to minimax
-    private final char p1;
-    private final char p2;
+    private final char p1; // main player
+    private final char p2; // secondary player or CPU
     private char winner;
     private final HashMap<String, Integer> memo; // memoize/save moves to optimize minimax algorithm
 
@@ -234,27 +238,30 @@ class Board {
 
     public void start() {
         Scanner input = new Scanner(System.in);
-        boolean flag = true; // true == P1's turn
-        while (numMoves < maxMoves && !gameOver) { // n x n board spaces, game control variable
-            char currentPlayer = flag ? p1 : p2;
-            String player = flag ? "P1" : "P2";
+        boolean p1Turn = true; // true == P1's turn
+        while (numMoves <= maxMoves && !gameOver) { // n x n board spaces, game control variable
+            char currentPlayer = p1Turn ? p1 : p2;
+            String player = p1Turn ? "P1" : "P2";
             display(); // display current board before each move
 
-            System.out.println(player + ", it's your turn. Place your \"" + currentPlayer + "\" into a row and column seperated by a space (e.g., 1 1):");
+            System.out.println(player + ", it's your turn. Place your \"" + currentPlayer
+                    + "\" into a row and column seperated by a space (e.g., 1 1):");
             try {
                 int row = input.nextInt();
                 int col = input.nextInt();
 
                 if (row >= 0 && row < boardSize && col >= 0 && col < boardSize) { // valid range
                     if (makeMove(row, col, currentPlayer)) {
-                        flag = !flag; // only switch player if move was successful
+                        p1Turn = !p1Turn; // only switch player if move was successful
                         numMoves++;
                     }
                 } else {
-                    System.err.println("Invalid move. Please enter a valid row and column space between 0-2");
+                    System.err.println("Invalid move. Please enter a valid row and column space between 0-"
+                            + (boardSize-1));
                 }
             } catch (InputMismatchException e) {
-                System.err.println("Invalid input. You must enter two consecutive integers between 0-2");
+                System.err.println("Invalid input. You must enter two consecutive integers between 0-"
+                        + (boardSize-1));
                 input.nextLine();
             }
             updateSuffix();
@@ -274,13 +281,13 @@ class Board {
 
     /**
      * @precondition - will not be called if game is already over
-     * @param row - nonnegative integer 0-2
-     * @param col - nonnegative integer 0-2
+     * @param row - nonnegative integer 0-boardSize
+     * @param col - nonnegative integer 0-boardSize
      * @param player - character 'X' or 'O' only
      * @return whether the requested move was successful
      */
     private boolean makeMove(int row, int col, char player) {
-        if (board[row][col] == 'X' || board[row][col] == 'O') {
+        if (board[row][col] == p1 || board[row][col] == p2) {
             System.err.println("Space (" + row + "," + col + ") is already occupied.");
             return false; // unsuccessful move
         }
@@ -293,10 +300,10 @@ class Board {
         if (checkWinner(currentPlayer)) {
             winner = currentPlayer;
             return true; // Game over due to win
-        } else {
-            return isBoardFull(); // Game over due to draw, or game continues
         }
+        return isBoardFull(); // Game over due to draw, or game continues
     }
+
     private boolean isBoardFull() {
         // Check if all cells on the board are filled
         for (int i = 0; i < boardSize; i++) {
@@ -412,10 +419,10 @@ class Board {
                     return true;
                 }
             } else {
-                System.err.println("Invalid move. Please enter a valid row and column space between 0-2");
+                System.err.println("Invalid move. Please enter a valid row and column space between 0-" + (boardSize - 1));
             }
         } catch (InputMismatchException e) {
-            System.err.println("Invalid input. You must enter two consecutive integers between 0-2");
+            System.err.println("Invalid input. You must enter two consecutive integers between 0-"+ (boardSize - 1));
             input.nextLine();
         }
         return false;
@@ -423,22 +430,22 @@ class Board {
 
     public void startCPU(CPUDifficulty difficulty) {
         Scanner input = new Scanner(System.in);
-        boolean flag = true; // true == P1's turn
-        while (numMoves < maxMoves && !gameOver) { // n x n board spaces, game control variable
-            char currentPlayer = flag ? p1 : p2;
+        boolean p1Turn = true; // true == P1's turn
+        while (numMoves <= maxMoves && !gameOver) { // n x n board spaces, game control variable
+            char currentPlayer = p1Turn ? p1 : p2;
             display(); // display current board before each move
 
             // Player's Turn
-            if (flag) {
-                flag = !makePlayerMove(currentPlayer, input);
-                if (!flag) {
+            if (p1Turn) {
+                p1Turn = !makePlayerMove(currentPlayer, input); // returns true if move successfully made
+                if (!p1Turn) {
                     numMoves++;
                     updateSuffix();
                     System.out.println(numMoves + suffix + " move:");
                 }
             } else {
                 makeCPUMove(difficulty, currentPlayer);
-                flag = true;
+                p1Turn = true;
                 numMoves++;
                 updateSuffix();
                 System.out.println(numMoves + suffix + " move:");
@@ -448,7 +455,6 @@ class Board {
         if (difficulty == CPUDifficulty.HARD) {
             System.out.println(numRecursions + " total recursive calls to minimax");
         }
-
 
         display(); // display the final board after the match is over
         if (winner == 0) {
@@ -464,7 +470,7 @@ class Board {
     void makeCPUMove(CPUDifficulty diff, char currentPlayer) {
         Move bestMove = null;
         int iter = 0;
-        while (bestMove == null && ++iter < kMaxIterations) {
+        while (bestMove == null && ++iter <= kMaxIterations) {
             bestMove = switch (diff) {
                 case CPUDifficulty.EASY -> // dumb (random) CPU move
                         getRandomMove();
@@ -474,11 +480,19 @@ class Board {
                         smartMove(currentPlayer);
             };
         }
-        assert bestMove != null;
+        assert bestMove != null : "Unable to find CPU move. Should not trigger this assertion.";
         int x = bestMove.row;
         int y = bestMove.col;
         assert x >= 0 && y >= 0 : "Error with CPU move. Should not trigger this assertion";
         board[x][y] = currentPlayer;
+
+        // Trying to add delay to each CPU move, may not be the best idea. Review thread interruption
+        try {
+            Thread.sleep(250);
+        } catch (InterruptedException e) {
+            System.exit(1);
+        }
+
         System.out.println("It is the CPU's turn (" + currentPlayer + "). It's move: (" + x + ", " + y + ")");
     }
 
@@ -495,7 +509,7 @@ class Board {
 
     public void simulate(CPUDifficulty diff) {
         boolean turn = false;
-        while (numMoves < maxMoves && !gameOver) {
+        while (numMoves <= maxMoves && !gameOver) {
             char current = turn ? p1 : p2;
             display();
             makeCPUMove(diff, current);
@@ -504,6 +518,7 @@ class Board {
             turn = !turn;
             gameOver = checkGameStatus(current);
             System.out.println(numMoves + suffix + " move:");
+
         }
         display();
         if (winner == 0) {
@@ -715,7 +730,7 @@ class Board {
         if ((move = blockOpponentWin(player)) != null) { // block opp winning move
             return move;
         }
-        if (boardSize % 2 != 0) { // center move
+        if (boardSize % 2 != 0) { // center move, only for odd-sized boards
             int center = boardSize / 2;
             if (isValidMove(center, center)) {
                 return new Move(center, center);
@@ -726,7 +741,7 @@ class Board {
             return move;
         }
 
-        // All else fails, make random move
+        // If all else fails, make random move
         return getRandomMove();
     }
 
@@ -752,7 +767,7 @@ class Board {
     }
 
     private Move blockOpponentWin(char player) {
-        char opponent = (player == 'X') ? 'O' : 'X';
+        char opponent = (player == p1) ? p2 : p1;
         return winningMove(opponent);
     }
     private Move moveCorners() {
@@ -763,7 +778,7 @@ class Board {
             return new Move(0, boardSize - 1);
         }
         if (isValidMove(boardSize - 1,boardSize - 1)) { // bottom-right
-            return new Move(boardSize - 1, boardSize -1);
+            return new Move(boardSize - 1, boardSize - 1);
         }
         if (isValidMove(boardSize - 1,0)) { // bottom-right
             return new Move(boardSize - 1, 0);
